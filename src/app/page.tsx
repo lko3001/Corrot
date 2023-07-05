@@ -1,113 +1,217 @@
-import Image from 'next/image'
+"use client";
+import All from "@/components/All";
+import React, { useEffect, useRef, useState } from "react";
+import { exportedComponents } from "@/components/themes";
+import type { ComponentName } from "../components/types/index";
+import { arrayMoveImmutable } from "array-move";
+import {
+  DevicePhoneMobileIcon,
+  DeviceTabletIcon,
+  ComputerDesktopIcon,
+} from "@heroicons/react/20/solid";
+import Draggable from "react-draggable";
 
-export default function Home() {
+const Test2 = () => {
+  // USE STATES ------------------------------------------------------------------------------
+  const [renderedComponents, setRenderedComponents] = useState<ComponentName[]>(
+    []
+  );
+  const [device, setDevice] = useState<"desktop" | "tablet" | "smartphone">(
+    "desktop"
+  );
+  const [containerChildrenOrder, setContainerChildrenOrder] = useState<
+    HTMLParagraphElement[]
+  >([]);
+  const [ys, setYs] = useState<number[]>([]);
+  const [indexes, setIndexes] = useState<{
+    from: number | undefined;
+    to: number | undefined;
+  }>({ from: undefined, to: undefined });
+  const [triggerUpdateChildren, setTriggerUpdateChildren] = useState(true);
+
+  // VARIABLES ------------------------------------------------------------------------------
+  const everythingKeys: ComponentName[] = Object.keys(
+    exportedComponents
+  ) as ComponentName[];
+  const container = useRef<HTMLDivElement | null>(null);
+
+  // FUNCTIONS ------------------------------------------------------------------------------
+  // Pushes created component to renderedComponents
+  const handleComponentClick = (component: ComponentName) => {
+    setRenderedComponents((prevComponents) => [...prevComponents, component]);
+  };
+
+  // Calculates the middle of the element you're dragging, then, finds the index of the closest
+  // number in the ys array to your number. It then sets the indexes with setIndexes
+  function handleDrag(index: number) {
+    const yOfDraggedEl = calculateMiddle(containerChildrenOrder[index]);
+    const targetIndex = ys.indexOf(closestNumber(ys, yOfDraggedEl));
+    if (containerChildrenOrder[targetIndex]) {
+      setIndexes({ from: index, to: targetIndex });
+    }
+  }
+
+  // It switches the components of the renderedComponents
+  function handleStop() {
+    if (indexes.from !== undefined && indexes.to !== undefined) {
+      setRenderedComponents(
+        arrayMoveImmutable(renderedComponents, indexes.from, indexes.to)
+      );
+    }
+    setIndexes({ from: undefined, to: undefined });
+  }
+
+  // It takes all the children of the container and then calculates the height from
+  // the top to the middle of the element and puts it in the ys array
+  function updateContainerChildren() {
+    const containerChildren = container.current?.children;
+    const simpleYs = [];
+    if (containerChildren) {
+      setContainerChildrenOrder(
+        container.current?.children as unknown as HTMLParagraphElement[]
+      );
+      for (let i = 0; i < containerChildren.length; i++) {
+        simpleYs.push(calculateMiddle(containerChildren[i]));
+      }
+      setYs(simpleYs);
+    }
+  }
+
+  // UTILS FUNCTIONS ------------------------------------------------------------------------------
+  function calculateMiddle(element: Element): number {
+    const elRect = element.getBoundingClientRect();
+    return elRect.top + elRect.height / 2;
+  }
+
+  function closestNumber(numbers: number[], target: number): number {
+    const differences = numbers.map((number) => ({
+      number: number,
+      diff: Math.abs(number - target),
+    }));
+    const inOrder = differences.sort((a, b) => a.diff - b.diff);
+    const closestNumber = inOrder[0].number;
+    return closestNumber;
+  }
+
+  useEffect(updateContainerChildren, [triggerUpdateChildren]);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="flex flex-row h-full">
+      {/* Sidebar */}
+      <section className="p-6 bg-neutral-800 h-full flex flex-col gap-4 min-w-[200px]">
+        {/* ICONS - DEVICE */}
+        <div className="flex flex-row justify-around relative">
+          <input
+            type="radio"
+            className="peer/desktop hidden"
+            id="desktop"
+            checked={device === "desktop"}
+            onChange={() => setDevice("desktop")}
+          />
+          <label
+            htmlFor="desktop"
+            className="hover:bg-neutral-700 transition-colors peer-checked/desktop:text-neutral-800 cursor-pointer peer-checked/desktop:bg-white rounded-full p-2"
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+            <ComputerDesktopIcon className="h-5" />
+          </label>
+          <input
+            type="radio"
+            className="peer/tablet hidden"
+            id="tablet"
+            checked={device === "tablet"}
+            onChange={() => setDevice("tablet")}
+          />
+          <label
+            htmlFor="tablet"
+            className="hover:bg-neutral-700 transition-colors peer-checked/tablet:text-neutral-800 cursor-pointer peer-checked/tablet:bg-white rounded-full p-2"
+          >
+            <DeviceTabletIcon className="h-5" />
+          </label>
+          <input
+            type="radio"
+            className="peer/smartphone hidden"
+            id="smartphone"
+            checked={device === "smartphone"}
+            onChange={() => setDevice("smartphone")}
+          />
+          <label
+            htmlFor="smartphone"
+            className="hover:bg-neutral-700 transition-colors peer-checked/smartphone:text-neutral-800 cursor-pointer peer-checked/smartphone:bg-white rounded-full p-2"
+          >
+            <DevicePhoneMobileIcon className="h-5" />
+          </label>
         </div>
-      </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
+        {/* Buttons to Create the Components */}
+        {everythingKeys.map((compName, index) => (
+          <button
+            className="px-4 py-2 bg-neutral-700 rounded-md"
+            key={compName + index}
+            onClick={() => {
+              handleComponentClick(compName);
+              setTriggerUpdateChildren((prev) => !prev);
+            }}
+          >
+            {compName}
+          </button>
+        ))}
+        <div ref={container} className="flex flex-col gap-2 relative">
+          {renderedComponents.map((el, index) => {
+            const checkings =
+              indexes.to !== undefined &&
+              indexes.from !== undefined &&
+              index === indexes.to &&
+              index !== indexes.from;
+            return (
+              <Draggable
+                key={el + index}
+                axis="y"
+                // bounds="parent"
+                position={{ x: 0, y: 0 }}
+                onDrag={(e) => {
+                  handleDrag(index);
+                  console.log(e);
+                }}
+                onStop={handleStop}
+              >
+                <div>
+                  {checkings && index <= indexes.from! && (
+                    <div className="h-1 bg-red-500 w-full"></div>
+                  )}
+                  <p className="bg-neutral-700 py-1 px-2 rounded-md active:z-10 active:opacity-50">
+                    {el + index}
+                  </p>
+                  {checkings && index >= indexes.from! && (
+                    <div className="h-1 bg-red-500 w-full"></div>
+                  )}
+                </div>
+              </Draggable>
+            );
+          })}
+        </div>
+      </section>
+      {/* Canvas */}
+      <section
+        className={`grow overflow-y-auto mx-auto h-full ${
+          device === "smartphone"
+            ? "max-w-sm py-5"
+            : device === "tablet"
+            ? "max-w-3xl py-5"
+            : "max-w-none"
+        }`}
+      >
+        <div
+          className={`bg-neutral-700 h-full ${
+            device === "smartphone" || device === "tablet"
+              ? "rounded-md"
+              : "rounded-none"
+          }`}
         >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+          <All components={renderedComponents} />
+        </div>
+      </section>
+    </div>
+  );
+};
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
-}
+export default Test2;

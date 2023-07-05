@@ -1,99 +1,84 @@
 "use client";
-import All from "@/components/All";
-import React, { useEffect, useRef, useState } from "react";
+import ComponentRenderer from "@/components/ComponentsRenderer";
+import React, { useState } from "react";
 import { exportedComponents } from "@/components/themes";
-import type { ComponentName } from "../components/types/index";
-import { arrayMoveImmutable } from "array-move";
+import type { ComponentName, ComponentObj } from "@/components/types/index";
 import {
   DevicePhoneMobileIcon,
   DeviceTabletIcon,
   ComputerDesktopIcon,
 } from "@heroicons/react/20/solid";
-import Draggable from "react-draggable";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import SortableItem from "@/components/dnd/SortableItem";
 
-const Test2 = () => {
+export default function Home() {
+  //
   // USE STATES ------------------------------------------------------------------------------
-  const [renderedComponents, setRenderedComponents] = useState<ComponentName[]>(
+  const [renderedComponents, setRenderedComponents] = useState<ComponentObj[]>(
     []
   );
   const [device, setDevice] = useState<"desktop" | "tablet" | "smartphone">(
     "desktop"
   );
-  const [containerChildrenOrder, setContainerChildrenOrder] = useState<
-    HTMLParagraphElement[]
-  >([]);
-  const [ys, setYs] = useState<number[]>([]);
-  const [indexes, setIndexes] = useState<{
-    from: number | undefined;
-    to: number | undefined;
-  }>({ from: undefined, to: undefined });
-  const [triggerUpdateChildren, setTriggerUpdateChildren] = useState(true);
 
   // VARIABLES ------------------------------------------------------------------------------
-  const everythingKeys: ComponentName[] = Object.keys(
+  const componentNames: ComponentName[] = Object.keys(
     exportedComponents
   ) as ComponentName[];
-  const container = useRef<HTMLDivElement | null>(null);
+
+  const componentList: ComponentObj[] = componentNames.map((name) => ({
+    id: getRandom(),
+    name: name,
+  }));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // FUNCTIONS ------------------------------------------------------------------------------
-  // Pushes created component to renderedComponents
-  const handleComponentClick = (component: ComponentName) => {
-    setRenderedComponents((prevComponents) => [...prevComponents, component]);
-  };
+  function handleComponentClick(component: ComponentName) {
+    setRenderedComponents((prevComponents) => [
+      ...prevComponents,
+      { id: getRandom(), name: component },
+    ]);
+  }
 
-  // Calculates the middle of the element you're dragging, then, finds the index of the closest
-  // number in the ys array to your number. It then sets the indexes with setIndexes
-  function handleDrag(index: number) {
-    const yOfDraggedEl = calculateMiddle(containerChildrenOrder[index]);
-    const targetIndex = ys.indexOf(closestNumber(ys, yOfDraggedEl));
-    if (containerChildrenOrder[targetIndex]) {
-      setIndexes({ from: index, to: targetIndex });
+  function handleDragEnd(event: any) {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setRenderedComponents((items) => {
+        const oldIndex = items.findIndex(
+          (component) => component.id === active.id
+        );
+        const newIndex = items.findIndex(
+          (component) => component.id === over.id
+        );
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
   }
 
-  // It switches the components of the renderedComponents
-  function handleStop() {
-    if (indexes.from !== undefined && indexes.to !== undefined) {
-      setRenderedComponents(
-        arrayMoveImmutable(renderedComponents, indexes.from, indexes.to)
-      );
-    }
-    setIndexes({ from: undefined, to: undefined });
+  function getRandom() {
+    return Math.random().toString().split(".")[1];
   }
-
-  // It takes all the children of the container and then calculates the height from
-  // the top to the middle of the element and puts it in the ys array
-  function updateContainerChildren() {
-    const containerChildren = container.current?.children;
-    const simpleYs = [];
-    if (containerChildren) {
-      setContainerChildrenOrder(
-        container.current?.children as unknown as HTMLParagraphElement[]
-      );
-      for (let i = 0; i < containerChildren.length; i++) {
-        simpleYs.push(calculateMiddle(containerChildren[i]));
-      }
-      setYs(simpleYs);
-    }
-  }
-
-  // UTILS FUNCTIONS ------------------------------------------------------------------------------
-  function calculateMiddle(element: Element): number {
-    const elRect = element.getBoundingClientRect();
-    return elRect.top + elRect.height / 2;
-  }
-
-  function closestNumber(numbers: number[], target: number): number {
-    const differences = numbers.map((number) => ({
-      number: number,
-      diff: Math.abs(number - target),
-    }));
-    const inOrder = differences.sort((a, b) => a.diff - b.diff);
-    const closestNumber = inOrder[0].number;
-    return closestNumber;
-  }
-
-  useEffect(updateContainerChildren, [triggerUpdateChildren]);
 
   return (
     <div className="flex flex-row h-full">
@@ -141,58 +126,38 @@ const Test2 = () => {
             <DevicePhoneMobileIcon className="h-5" />
           </label>
         </div>
-
         {/* Buttons to Create the Components */}
-        {everythingKeys.map((compName, index) => (
+        {componentList.map((component) => (
           <button
             className="px-4 py-2 bg-neutral-700 rounded-md"
-            key={compName + index}
-            onClick={() => {
-              handleComponentClick(compName);
-              setTriggerUpdateChildren((prev) => !prev);
-            }}
+            key={component.id}
+            onClick={() => handleComponentClick(component.name)}
           >
-            {compName}
+            {component.name}
           </button>
         ))}
-        <div ref={container} className="flex flex-col gap-2 relative">
-          {renderedComponents.map((el, index) => {
-            const checkings =
-              indexes.to !== undefined &&
-              indexes.from !== undefined &&
-              index === indexes.to &&
-              index !== indexes.from;
-            return (
-              <Draggable
-                key={el + index}
-                axis="y"
-                // bounds="parent"
-                position={{ x: 0, y: 0 }}
-                onDrag={(e) => {
-                  handleDrag(index);
-                  console.log(e);
-                }}
-                onStop={handleStop}
-              >
-                <div>
-                  {checkings && index <= indexes.from! && (
-                    <div className="h-1 bg-red-500 w-full"></div>
-                  )}
-                  <p className="bg-neutral-700 py-1 px-2 rounded-md active:z-10 active:opacity-50">
-                    {el + index}
-                  </p>
-                  {checkings && index >= indexes.from! && (
-                    <div className="h-1 bg-red-500 w-full"></div>
-                  )}
-                </div>
-              </Draggable>
-            );
-          })}
-        </div>
+        <DndContext
+          sensors={sensors}
+          onDragEnd={handleDragEnd}
+          collisionDetection={closestCenter}
+        >
+          <SortableContext
+            items={renderedComponents}
+            strategy={verticalListSortingStrategy}
+          >
+            {renderedComponents.map((component) => (
+              <SortableItem
+                key={component.id}
+                id={component.id}
+                name={component.name}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
       </section>
       {/* Canvas */}
       <section
-        className={`grow overflow-y-auto mx-auto h-full ${
+        className={`grow overflow-y-auto mx-auto h-full transition-all ${
           device === "smartphone"
             ? "max-w-sm py-5"
             : device === "tablet"
@@ -201,17 +166,15 @@ const Test2 = () => {
         }`}
       >
         <div
-          className={`bg-neutral-700 h-full ${
+          className={`bg-neutral-700 h-full overflow-hidden overflow-y-auto @container ${
             device === "smartphone" || device === "tablet"
               ? "rounded-md"
               : "rounded-none"
           }`}
         >
-          <All components={renderedComponents} />
+          <ComponentRenderer components={renderedComponents} />
         </div>
       </section>
     </div>
   );
-};
-
-export default Test2;
+}

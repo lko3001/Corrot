@@ -22,6 +22,11 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import {
+  restrictToParentElement,
+  restrictToVerticalAxis,
+  restrictToWindowEdges,
+} from "@dnd-kit/modifiers";
 import SortableItem from "@/components/dnd/SortableItem";
 
 export default function Home() {
@@ -136,24 +141,31 @@ export default function Home() {
             {component.name}
           </button>
         ))}
-        <DndContext
-          sensors={sensors}
-          onDragEnd={handleDragEnd}
-          collisionDetection={closestCenter}
-        >
-          <SortableContext
-            items={renderedComponents}
-            strategy={verticalListSortingStrategy}
+        <div>
+          <DndContext
+            sensors={sensors}
+            onDragEnd={handleDragEnd}
+            collisionDetection={closestCenter}
+            modifiers={[
+              restrictToVerticalAxis,
+              restrictToParentElement,
+              restrictToWindowEdges,
+            ]}
           >
-            {renderedComponents.map((component) => (
-              <SortableItem
-                key={component.id}
-                id={component.id}
-                name={component.name}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
+            <SortableContext
+              items={renderedComponents}
+              strategy={verticalListSortingStrategy}
+            >
+              {renderedComponents.map((component) => (
+                <SortableItem
+                  key={component.id}
+                  id={component.id}
+                  name={component.name}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        </div>
       </section>
       {/* Canvas */}
       <section

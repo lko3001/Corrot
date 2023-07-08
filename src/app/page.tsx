@@ -44,9 +44,11 @@ export default function Home() {
     exportedComponents
   ) as ComponentName[];
 
-  const componentList: ComponentObj[] = componentNames.map((name) => ({
+  const componentList: ComponentObj[] = exportedComponents.map((obj) => ({
     id: getRandom(),
-    name: name,
+    name: obj.name,
+    fields: obj.fields.map((el) => ({ name: el.name, value: "" })),
+    jsxElement: obj.jsxElement,
   }));
 
   const sensors = useSensors(
@@ -57,10 +59,15 @@ export default function Home() {
   );
 
   // FUNCTIONS ------------------------------------------------------------------------------
-  function handleComponentClick(component: ComponentName) {
+  function handleComponentClick(component: ComponentObj) {
     setRenderedComponents((prevComponents) => [
       ...prevComponents,
-      { id: getRandom(), name: component },
+      {
+        id: getRandom(),
+        name: component.name,
+        fields: component.fields,
+        jsxElement: component.jsxElement,
+      },
     ]);
   }
 
@@ -81,9 +88,26 @@ export default function Home() {
     }
   }
 
+  function handleFieldChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+    componentIndex: number,
+    el: { name: string; value?: string | undefined },
+    fieldIndex: number
+  ) {
+    console.log("Changed");
+    const newArr = [...renderedComponents];
+
+    const fieldObjectToChange = newArr[componentIndex].fields[fieldIndex];
+    fieldObjectToChange.value = event.target.value;
+    console.log(fieldObjectToChange, event.target.value);
+    setRenderedComponents(newArr);
+  }
+
   function getRandom() {
     return Math.random().toString().split(".")[1];
   }
+
+  console.log(exportedComponents);
 
   return (
     <div className="flex flex-row h-full">
@@ -136,7 +160,7 @@ export default function Home() {
           <button
             className="px-4 py-2 bg-neutral-700 rounded-md"
             key={component.id}
-            onClick={() => handleComponentClick(component.name)}
+            onClick={() => handleComponentClick(component)}
           >
             {component.name}
           </button>
@@ -156,12 +180,28 @@ export default function Home() {
               items={renderedComponents}
               strategy={verticalListSortingStrategy}
             >
-              {renderedComponents.map((component) => (
+              {renderedComponents.map((component, compIndex) => (
                 <SortableItem
                   key={component.id}
                   id={component.id}
-                  name={component.name}
-                />
+                  component={component}
+                >
+                  {component.fields.map((el, fieldIndex) => (
+                    <input
+                      key={el.name}
+                      type="text"
+                      placeholder={el.name}
+                      autoFocus={fieldIndex === 0}
+                      className="block text-black rounded px-2 py-1 mb-1 placeholder:capitalize"
+                      onChange={(e) =>
+                        handleFieldChange(e, compIndex, el, fieldIndex)
+                      }
+                      value={
+                        renderedComponents[compIndex].fields[fieldIndex].value
+                      }
+                    />
+                  ))}
+                </SortableItem>
               ))}
             </SortableContext>
           </DndContext>

@@ -1,24 +1,35 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ComponentObj } from "../types";
+import { ReactNode } from "react";
 
 export default function SortableItem({
   id,
-  name,
+  component,
+  children,
 }: {
   id: string;
-  name: string;
+  component: ComponentObj;
+  children?: ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {name}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-neutral-600 rounded-md py-1 px-2 mb-2 touch-none"
+    >
+      <h3 className="mb-1 font-semibold text-lg" {...attributes} {...listeners}>
+        {component.name}
+      </h3>
+      {children}
     </div>
   );
 }
